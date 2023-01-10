@@ -41,6 +41,9 @@ module RailsCursorPagination
                   "`#{decoded}` but could not be parsed"
           end
           new(id: decoded, order_field: :id)
+        elsif decoded.is_a?(Array) && decoded.size == 3
+          new(id: decoded[2], order_field: order_field,
+              order_field_value: Time.parse(decoded[0]).change(nsec: decoded[1]))
         else
           unless decoded.is_a?(Array) && decoded.size == 2
             raise InvalidCursorError,
@@ -89,7 +92,11 @@ module RailsCursorPagination
     def encode
       unencoded_cursor =
         if custom_order_field?
-          [@order_field_value, @id]
+          if @order_field_value.is_a?(ActiveSupport::TimeWithZone)
+            [@order_field_value, @order_field_value.nsec, @id]
+          else
+            [@order_field_value, @id]
+          end
         else
           @id
         end
